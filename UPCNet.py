@@ -6,7 +6,6 @@ import time
 import os
 import requests
 import sys
-from getpass import getpass
 
 
 def service_choose(service):  # 运营商选择
@@ -36,17 +35,14 @@ def autoexit():  # 延时一秒后结束程序
 
 def getpath():  # 返回账号密码的存储路径
     path = os.path.split(os.path.realpath(__file__))[0]  # 脚本根目录
-    if os.name == "nt":
-        return path + "\\config.ini"  # Windows
-    else:
-        return path + "/config.ini"  # Linux
+    return "%s%sconfig.ini" % (path, os.path.sep)
 
 
 def config_init():
     file_path = getpath()
     if not os.path.exists(file_path):
         str_tmp = input('School number: ')
-        str_tmp = str_tmp + ' ' + getpass('Password: (Hidden)')
+        str_tmp = str_tmp + ' ' + input('Password: ')
         str_tmp = str_tmp + ' ' + input('1.default\n2.unicom\n3.cmcc\n4.ctcc\n5.local\nCommunications number: ')
         file = open(file_path, 'wb')
         file.write(encode(str_tmp))  # 加密后的字符串写入二进制文件
@@ -62,92 +58,16 @@ def online():
     return False
 
 
-arg_parsed = url = address = ""  # 全局变量
-cnt_try = 0  # 当前的尝试次数
-
-
-def init_net():  # 登录模块
-    global arg_parsed, url, cnt_try, address
-    arg_parsed = url = ""
-    address = "http://121.251.251.217"
-
-    try:
-        url = requests.get(address, allow_redirects=True, timeout=3).text
-
-    except:
-        cnt_try = cnt_try + 1
-        if cnt_try >= 5:
-            print("Please check the network connection or close the login windows")
-            return False
-        time.sleep(1)
-        return init_net()
-
-    else:
-        if ~url.find("121.251.251.217"):
-            address = "http://121.251.251.217"
-            arg_parsed = urllib.parse.quote(url[url.find('wlanuserip'):])
-
-        else:
-            address = "http://121.251.251.207"
-            buf = requests.post("http://121.251.251.207", allow_redirects=True).url
-            arg_parsed = urllib.parse.quote(urllib.parse.urlparse(buf).query)
-
-    return True
-
-
-def login():
-    if online():
-        print("Currently online")
-        return False
-    if init_net():
-        global arg_parsed, address, url
-        if ~url.find('success'):
-            logout()
-            global cnt_try
-            cnt_try = cnt_try + 1
-            if cnt_try >= 5:
-                print("Please check the network connection or close the login windows")
-                return False
-            time.sleep(1)
-            return login()
-
-        buf = decode(open(getpath(), "rb").readline())  # 读取二进制文件并解密
-
-        payload = {'userId': buf.split(' ')[0],
-                   'password': buf.split(' ')[1],
-                   'service': service_choose(buf.split(' ')[2]),
-                   'queryString': arg_parsed,
-                   'operatorPwd': '',
-                   'operatorUserId': '',
-                   'vaildcode': '',
-                   'passwordEncrypt': 'false'}
-        post_message = requests.post(address + "/eportal/InterFace.do?method=login", data=payload)
-
-        if post_message.text.find("success") >= 0 and online():
-            print("Login success")  # 登录成功
-            return True
-
-        else:
-            print("Something wrong")  # 登录失败
-            return False
-
-    return False
-
-
 def out(address):
-    try:
-        url = requests.get(address, allow_redirects=True, timeout=3).url
-        if ~url.find("userIndex="):
-            userIndex = url[url.find("userIndex=") + 10:]
-            requests.post(address + "/eportal/InterFace.do?method=logout", data={'userIndex': userIndex})
-    except:
-        return
+    url = requests.get(address, allow_redirects=True, timeout=3).url
+    if ~url.find("userIndex="):
+        userIndex = url[url.find("userIndex=") + 10:]
+        requests.post(address + "/eportal/InterFace.do?method=logout", data={'userIndex': userIndex})
 
 
 def logout():
     try:
-        out("http://121.251.251.217")
-        out("http://121.251.251.207")
+        out("http://lan.upc.edu.cn")
 
     except:
         print("Logout failed")
@@ -157,6 +77,45 @@ def logout():
             print("Logout failed")
         else:
             print("Logout success")
+
+
+def login():
+    url = ""
+    argParsed = ""
+    address = "http://121.251.251.217"
+    magic_word = "/&userlocation=ethtrunk/62:3501.0"
+    lan_special_domain = "http://lan.upc.edu.cn"
+    login_parameter = "/eportal/InterFace.do?method=login"
+    try:
+        trueText = requests.get(address + magic_word, allow_redirects=True).text
+        trueUrl = requests.post(address + magic_word, allow_redirects=True).url
+        url = lan_special_domain + login_parameter
+        if trueText.find("Error report") > -1:
+            trueUrl = requests.post("http://121.251.251.207" + magic_word, allow_redirects=True).url  # 特殊处理
+            url = address + login_parameter
+        argParsed = urllib.parse.quote(urllib.parse.urlparse(trueUrl).query)
+        if argParsed.find('wlanuserip') == -1:
+            print("Currently online")
+            autoexit()
+    except requests.exceptions.ConnectionError:
+        print("Network Error")
+        autoexit()
+
+    buf = decode(open(getpath(), "rb").readline())  # 读取二进制文件并解密
+    payload = {'userId': buf.split(' ')[0],
+               'password': buf.split(' ')[1],
+               'service': service_choose(buf.split(' ')[2]),
+               'queryString': argParsed,
+               'operatorPwd': '',
+               'operatorUserId': '',
+               'vaildcode': '',
+               'passwordEncrypt': 'false'}
+    postMessage = requests.post(url, data=payload)
+    if postMessage.text.find("success") >= 0:
+        print("Login Success")
+    else:
+        print("Login Failed")
+        autoexit()
 
 
 if __name__ == '__main__':
@@ -170,7 +129,7 @@ if __name__ == '__main__':
                 file_path = getpath()
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                print('Reset successful')
+                print('Reset Success')
 
             elif argv == 'logout':
                 logout()
