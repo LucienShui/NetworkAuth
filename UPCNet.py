@@ -107,10 +107,10 @@ def login(config: dict, out_function=print):
         arg_parsed = quote(urlparse(true_url).query)
         if arg_parsed.find('wlanuserip') == -1:
             out_function("Currently online")
-            auto_exit()
+            # auto_exit()
     except requests.exceptions.ConnectionError:
         out_function("Network Error")
-        auto_exit()
+        # auto_exit()
 
     payload = {'userId': config['username'],
                'password': config['password'],
