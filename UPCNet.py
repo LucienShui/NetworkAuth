@@ -123,7 +123,7 @@ def login(config: dict, out_function=print):
 
     post_message = requests.post(url, data=payload)
     if post_message.text.find("success") >= 0:
-        out_function("Login Success")
+        out_function("{} Login Success".format(config['username']))
     else:
         out_function("Login Failed")
         # auto_exit()
