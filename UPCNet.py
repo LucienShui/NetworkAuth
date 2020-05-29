@@ -91,8 +91,6 @@ def logout():
 
 
 def login(config: dict, out_function=print):
-    url = ""
-    arg_parsed = ""
     address = "http://121.251.251.217"
     magic_word = "/&userlocation=ethtrunk/62:3501.0"
     lan_special_domain = "http://lan.upc.edu.cn"
@@ -105,28 +103,27 @@ def login(config: dict, out_function=print):
             true_url = requests.post("http://121.251.251.207" + magic_word, allow_redirects=True).url  # 特殊处理
             url = address + login_parameter
         arg_parsed = quote(urlparse(true_url).query)
+
         if arg_parsed.find('wlanuserip') == -1:
             out_function("Currently online")
-            # auto_exit()
+
+        else:
+            payload = {'userId': config['username'],
+                       'password': config['password'],
+                       'service': service_choose(config['service_name']),
+                       'queryString': arg_parsed,
+                       'operatorPwd': '',
+                       'operatorUserId': '',
+                       'vaildcode': '',
+                       'passwordEncrypt': 'false'}
+
+            post_message = requests.post(url, data=payload)
+            if post_message.text.find("success") >= 0:
+                out_function("{} Login Success".format(config['username']))
+            else:
+                out_function("Login Failed")
     except requests.exceptions.ConnectionError:
         out_function("Network Error")
-        # auto_exit()
-
-    payload = {'userId': config['username'],
-               'password': config['password'],
-               'service': service_choose(config['service_name']),
-               'queryString': arg_parsed,
-               'operatorPwd': '',
-               'operatorUserId': '',
-               'vaildcode': '',
-               'passwordEncrypt': 'false'}
-
-    post_message = requests.post(url, data=payload)
-    if post_message.text.find("success") >= 0:
-        out_function("{} Login Success".format(config['username']))
-    else:
-        out_function("Login Failed")
-        # auto_exit()
 
 
 def get_logger() -> logging.Logger:
