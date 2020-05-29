@@ -1,11 +1,15 @@
 #!/usr/bin/python3
-#!coding=utf-8
-import urllib
+# !coding=utf-8
 import base64
+import typing
+import json
 import time
 import os
 import requests
 import sys
+import logging
+from logging.handlers import TimedRotatingFileHandler
+from urllib.parse import quote, urlparse
 
 
 def service_choose(service):  # 运营商选择
@@ -28,24 +32,31 @@ def decode(code):  # 解密
     return bytes.decode(base64.decodebytes(code), 'utf-8')
 
 
-def autoexit():  # 延时一秒后结束程序
+def auto_exit():  # 延时一秒后结束程序
     time.sleep(1)
     sys.exit()
 
 
-def getpath():  # 返回账号密码的存储路径
-    path = os.path.split(os.path.realpath(__file__))[0]  # 脚本根目录
-    return "%s%sconfig.ini" % (path, os.path.sep)
+def get_config_file_path(absolute: bool = False) -> str:  # 返回账号密码的存储路径
+    if absolute:
+        path = os.path.split(os.path.realpath(__file__))[0]  # 脚本根目录
+        return "%s%sconfig.ini" % (path, os.path.sep)
+    return 'config.ini'
 
 
-def config_init():
-    file_path = getpath()
+def config_loader() -> dict:
+    file_path = get_config_file_path()
     if not os.path.exists(file_path):
-        str_tmp = input('School number: ')
-        str_tmp = str_tmp + ' ' + input('Password: ')
-        str_tmp = str_tmp + ' ' + input('1.default\n2.unicom\n3.cmcc\n4.ctcc\n5.local\nCommunications number: ')
+        config: typing.Dict[str, str] = dict()
+        config['username']: str = input('School number: ')
+        config['password']: str = input('Password: ')
+        config['service_name']: str = input('1.default\n2.unicom\n3.cmcc\n4.ctcc\n5.local\nCommunications number: ')
         file = open(file_path, 'wb')
-        file.write(encode(str_tmp))  # 加密后的字符串写入二进制文件
+        file.write(encode(json.dumps(config)))  # 加密后的字符串写入二进制文件
+        return config
+    else:
+        json_str = decode(open(get_config_file_path(), "rb").read())  # 读取二进制文件并解密
+        return json.loads(json_str)
 
 
 def online():
@@ -61,8 +72,8 @@ def online():
 def out(address):
     url = requests.get(address, allow_redirects=True, timeout=3).url
     if ~url.find("userIndex="):
-        userIndex = url[url.find("userIndex=") + 10:]
-        requests.post(address + "/eportal/InterFace.do?method=logout", data={'userIndex': userIndex})
+        user_index = url[url.find("userIndex=") + 10:]
+        requests.post(address + "/eportal/InterFace.do?method=logout", data={'userIndex': user_index})
 
 
 def logout():
@@ -79,54 +90,91 @@ def logout():
             print("Logout success")
 
 
-def login():
+def login(config: dict, out_function=print):
     url = ""
-    argParsed = ""
+    arg_parsed = ""
     address = "http://121.251.251.217"
     magic_word = "/&userlocation=ethtrunk/62:3501.0"
     lan_special_domain = "http://lan.upc.edu.cn"
     login_parameter = "/eportal/InterFace.do?method=login"
     try:
-        trueText = requests.get(address + magic_word, allow_redirects=True).text
-        trueUrl = requests.post(address + magic_word, allow_redirects=True).url
+        true_text = requests.get(address + magic_word, allow_redirects=True).text
+        true_url = requests.post(address + magic_word, allow_redirects=True).url
         url = lan_special_domain + login_parameter
-        if trueText.find("Error report") > -1:
-            trueUrl = requests.post("http://121.251.251.207" + magic_word, allow_redirects=True).url  # 特殊处理
+        if true_text.find("Error report") > -1:
+            true_url = requests.post("http://121.251.251.207" + magic_word, allow_redirects=True).url  # 特殊处理
             url = address + login_parameter
-        argParsed = urllib.parse.quote(urllib.parse.urlparse(trueUrl).query)
-        if argParsed.find('wlanuserip') == -1:
-            print("Currently online")
-            autoexit()
+        arg_parsed = quote(urlparse(true_url).query)
+        if arg_parsed.find('wlanuserip') == -1:
+            out_function("Currently online")
+            auto_exit()
     except requests.exceptions.ConnectionError:
-        print("Network Error")
-        autoexit()
+        out_function("Network Error")
+        auto_exit()
 
-    buf = decode(open(getpath(), "rb").readline())  # 读取二进制文件并解密
-    payload = {'userId': buf.split(' ')[0],
-               'password': buf.split(' ')[1],
-               'service': service_choose(buf.split(' ')[2]),
-               'queryString': argParsed,
+    payload = {'userId': config['username'],
+               'password': config['password'],
+               'service': service_choose(config['service_name']),
+               'queryString': arg_parsed,
                'operatorPwd': '',
                'operatorUserId': '',
                'vaildcode': '',
                'passwordEncrypt': 'false'}
-    postMessage = requests.post(url, data=payload)
-    if postMessage.text.find("success") >= 0:
-        print("Login Success")
+
+    post_message = requests.post(url, data=payload)
+    if post_message.text.find("success") >= 0:
+        out_function("Login Success")
     else:
-        print("Login Failed")
-        autoexit()
+        out_function("Login Failed")
+        # auto_exit()
 
 
-if __name__ == '__main__':
+def get_logger() -> logging.Logger:
+    log_dir = 'logs'
+    if not os.path.isdir(log_dir):
+        os.makedirs(log_dir)
+
+    logging.basicConfig()
+
+    logger = logging.getLogger('UPCNet')
+    logger.setLevel(logging.INFO)
+    timed_rotating_file_handler = TimedRotatingFileHandler(
+        filename=os.path.join(log_dir, 'log.txt'),
+        when='D',
+        interval=1,
+        backupCount=3,
+    )
+
+    formatter = logging.Formatter('%(asctime)s [%(levelname)-5s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    timed_rotating_file_handler.setFormatter(formatter)
+    logger.addHandler(timed_rotating_file_handler)
+
+    return logger
+
+
+def main():
     if len(sys.argv) > 1:
-        if len(sys.argv) > 2:
+        if len(sys.argv) > 3:
             print('Too many args')
+            auto_exit()
+
+        if len(sys.argv) == 3:
+
+            logger: logging.Logger = get_logger()
+
+            if sys.argv[1] == 'up' and sys.argv[2] == '-d':
+                config = config_loader()
+                while True:
+                    try:
+                        login(config=config, out_function=logger.info)
+                    except:
+                        pass
+                    time.sleep(10)
 
         else:
             argv = sys.argv[1]
             if argv == 'reset':
-                file_path = getpath()
+                file_path = get_config_file_path()
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 print('Reset Success')
@@ -138,7 +186,11 @@ if __name__ == '__main__':
                 print('Wrong args')
 
     else:
-        config_init()
-        login()
+        config = config_loader()
+        login(config=config)
 
-    autoexit()
+    auto_exit()
+
+
+if __name__ == '__main__':
+    main()
