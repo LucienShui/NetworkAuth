@@ -187,7 +187,8 @@ def main():
 
     else:
         config = config_loader()
-        login(config=config)
+        logger: logging.Logger = get_logger()
+        login(config=config, out_function=logger.info)
 
     auto_exit()
 
