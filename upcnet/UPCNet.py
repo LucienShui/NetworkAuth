@@ -12,13 +12,18 @@ from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import quote, urlparse
 
 
-def skip_online(func):
-    def execute(*args, **kwargs) -> typing.Any:
-        if is_online():
-            return None
-        else:
-            return func(*args, **kwargs)
-    return execute
+def skip_online(print_function=print):
+    def decorate(func):
+        def execute(*args, **kwargs) -> typing.Any:
+            if is_online():
+                print_function('Currently Online')
+                return None
+            else:
+                return func(*args, **kwargs)
+
+        return execute
+
+    return decorate
 
 
 def service_choose(service):  # 运营商选择
@@ -134,7 +139,22 @@ def login(config: dict, print_function=print):
         print_function("Network Error")
 
 
-def get_logger() -> logging.Logger:
+def get_logger(when: str = 'D') -> logging.Logger:
+    """
+    Get logger
+    :param when:
+        Calculate the real rollover interval, which is just the number of
+        seconds between rollovers.  Also set the filename suffix used when
+        a rollover occurs.  Current 'when' events supported:
+        S - Seconds
+        M - Minutes
+        H - Hours
+        D - Days
+
+        Case of the 'when' specifier is not important; lower or upper case
+        will work.
+    :return:
+    """
     log_dir = 'logs'
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
@@ -144,11 +164,16 @@ def get_logger() -> logging.Logger:
     logger = logging.getLogger('UPCNet')
     logger.setLevel(logging.INFO)
     timed_rotating_file_handler = TimedRotatingFileHandler(
-        filename=os.path.join(log_dir, 'log.txt'),
-        when='D',
+        filename=os.path.join(log_dir, 'app.log'),
+        when=when,
         interval=1,
         backupCount=3,
     )
+
+    if when.upper() == 'D':
+        timed_rotating_file_handler.suffix = "%Y-%m-%d.log"
+    else:
+        timed_rotating_file_handler.suffix = "%Y-%m-%d_%H:%M:%S.log"
 
     formatter = logging.Formatter('%(asctime)s [%(levelname)-5s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     timed_rotating_file_handler.setFormatter(formatter)

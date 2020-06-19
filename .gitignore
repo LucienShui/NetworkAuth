@@ -1,7 +1,5 @@
 config.ini
-.*
-*.sh
-__*
-log*
+__pycache__
+*.log
 .idea
 venv
