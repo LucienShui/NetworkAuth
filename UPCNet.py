@@ -12,6 +12,15 @@ from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import quote, urlparse
 
 
+def skip_online(func):
+    def execute(*args, **kwargs) -> typing.Any:
+        if is_online():
+            return None
+        else:
+            return func(*args, **kwargs)
+    return execute
+
+
 def service_choose(service):  # 运营商选择
     if service == '1':
         return "default"  # 校园网
@@ -59,7 +68,7 @@ def config_loader() -> dict:
         return json.loads(json_str)
 
 
-def online():
+def is_online():
     try:
         url = requests.get("http://captive.lucien.ink", allow_redirects=True, timeout=3).url
     except:
@@ -69,14 +78,13 @@ def online():
     return False
 
 
-def out(address):
-    url = requests.get(address, allow_redirects=True, timeout=3).url
-    if ~url.find("userIndex="):
-        user_index = url[url.find("userIndex=") + 10:]
-        requests.post(address + "/eportal/InterFace.do?method=logout", data={'userIndex': user_index})
-
-
 def logout():
+    def out(address):
+        url = requests.get(address, allow_redirects=True, timeout=3).url
+        if ~url.find("userIndex="):
+            user_index = url[url.find("userIndex=") + 10:]
+            requests.post(address + "/eportal/InterFace.do?method=logout", data={'userIndex': user_index})
+
     try:
         out("http://lan.upc.edu.cn")
 
@@ -84,13 +92,13 @@ def logout():
         print("Logout failed")
 
     else:
-        if online():
+        if is_online():
             print("Logout failed")
         else:
             print("Logout success")
 
 
-def login(config: dict, out_function=print):
+def login(config: dict, print_function=print):
     address = "http://121.251.251.217"
     magic_word = "/&userlocation=ethtrunk/62:3501.0"
     lan_special_domain = "http://lan.upc.edu.cn"
@@ -105,7 +113,7 @@ def login(config: dict, out_function=print):
         arg_parsed = quote(urlparse(true_url).query)
 
         if arg_parsed.find('wlanuserip') == -1:
-            out_function("Currently online")
+            print_function("Currently online")
 
         else:
             payload = {'userId': config['username'],
@@ -119,11 +127,11 @@ def login(config: dict, out_function=print):
 
             post_message = requests.post(url, data=payload)
             if post_message.text.find("success") >= 0:
-                out_function("{} Login Success".format(config['username']))
+                print_function("{} Login Success".format(config['username']))
             else:
-                out_function("Login Failed")
+                print_function("Login Failed")
     except requests.exceptions.ConnectionError:
-        out_function("Network Error")
+        print_function("Network Error")
 
 
 def get_logger() -> logging.Logger:
@@ -163,7 +171,7 @@ def main():
                 config = config_loader()
                 while True:
                     try:
-                        login(config=config, out_function=logger.info)
+                        login(config=config, print_function=logger.info)
                     except:
                         pass
                     time.sleep(10)
@@ -185,7 +193,7 @@ def main():
     else:
         config = config_loader()
         logger: logging.Logger = get_logger()
-        login(config=config, out_function=logger.info)
+        login(config=config, print_function=logger.info)
 
     auto_exit()
 
