@@ -30,8 +30,10 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Pyinstaller
+        shell: bash
         run: |
           pyinstaller UPCNet.py
+          cp config.example.json dist/UPCNet/
 
       - name: Stash dist to artifact
         uses: actions/upload-artifact@v2
