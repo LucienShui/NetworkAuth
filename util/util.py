@@ -10,15 +10,15 @@ def validator(config: dict) -> bool:
     :param config: config.json's content
     :return: True or Exception
     :except ValueError: field is required but not contains
-    :except KeyError: "service_name" is illegal
+    :except KeyError: "carrier" is illegal
     """
-    for key in ['username', 'password', 'service_name']:
+    for key in ['username', 'password', 'carrier']:
         if not config.__contains__(key):
             raise KeyError('field "{}" is required in config.json'.format(key))
 
-    if config['service_name'] not in ['default', 'unicom', 'cmcc', 'ctcc', 'local']:
-        raise ValueError('value of "service_name" should be one of ["default", "unicom", "cmcc", "ctcc", "local"], '
-                         'current is "{}"'.format(config['service_name']))
+    if config['carrier'] not in ['default', 'unicom', 'cmcc', 'ctcc', 'local']:
+        raise ValueError('value of "carrier" should be one of ["default", "unicom", "cmcc", "ctcc", "local"], '
+                         'but "{}" is given'.format(config['carrier']))
 
     return True
 

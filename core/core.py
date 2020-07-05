@@ -22,14 +22,14 @@ def skip_online(print_function=print):
     return decorate
 
 
-def service_choose(service: str):  # 运营商选择
-    if service == '1':
+def carrier_choose(carrier: str):  # 运营商选择
+    if carrier == '1':
         return 'default'  # 校园网
-    elif service == '2':
+    elif carrier == '2':
         return 'unicom'  # 联通
-    elif service == '3':
+    elif carrier == '3':
         return 'cmcc'  # 移动
-    elif service == '4':
+    elif carrier == '4':
         return 'ctcc'  # 电信
     return 'local'  # 校园内网
 
@@ -98,7 +98,7 @@ def login(config: dict, print_function=print):
         else:
             payload = {'userId': config['username'],
                        'password': config['password'],
-                       'service': config['service_name'],
+                       'service': config['carrier'],
                        'queryString': arg_parsed,
                        'operatorPwd': '',
                        'operatorUserId': '',
