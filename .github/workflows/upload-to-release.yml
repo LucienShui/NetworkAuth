@@ -30,8 +30,10 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Pyinstaller
+        shell: bash
         run: |
           pyinstaller UPCNet.py
+          cp config.example.json dist/UPCNet/
 
       - name: Stash dist to artifact
         uses: actions/upload-artifact@v2
@@ -57,14 +59,22 @@ jobs:
           name: dist
           path: UPCNet
 
+      - name: Set env
+        run: |
+          TAG=$(echo ${GITHUB_REF} | sed -e "s/refs\/tags\///g" | sed -e "s/release-v//g")
+          echo "::set-env name=TAG::${TAG}"
+          echo "::set-env name=DIR_NAME::UPCNet_${TAG}"
+          echo "::set-env name=ZIP_NAME::upcnet_${TAG}_windows.zip"
+
       - name: Zip file
         run: |
           mv UPCNet/UPCNet UPCNet/bin
-          zip -r upcnet-windows.zip UPCNet
+          mv UPCNet ${{ env.DIR_NAME }}
+          zip -r ${{ env.ZIP_NAME }} ${{ env.DIR_NAME }}
 
       - name: Upload to release
         uses: JasonEtco/upload-to-release@master
         with:
-          args: upcnet-windows.zip application/octet-stream
+          args: ${{ env.ZIP_NAME }} application/octet-stream
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

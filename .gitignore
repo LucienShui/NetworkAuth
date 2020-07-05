@@ -1,6 +1,14 @@
+# Project
 config.ini
 config.json
-__pycache__
 *.log
+
+# Python
+__pycache__
+
+# idea
 .idea
 venv
+
+# macOS
+.DS_Store
