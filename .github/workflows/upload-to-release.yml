@@ -55,11 +55,12 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: dist
-          path: dist
+          path: UPCNet
 
       - name: Zip file
         run: |
-          zip -r upcnet-windows.zip dist/UPCNet
+          mv UPCNet/UPCNet UPCNet/bin
+          zip -r upcnet-windows.zip UPCNet
 
       - name: Upload to release
         uses: JasonEtco/upload-to-release@master
