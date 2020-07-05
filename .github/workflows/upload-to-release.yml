@@ -59,12 +59,15 @@ jobs:
 
       - name: Zip file
         run: |
+          TAG=$(echo ${GITHUB_REF} | sed -e "s/refs\/tags\///g" | sed -e "s/release-v//g")
           mv UPCNet/UPCNet UPCNet/bin
-          zip -r upcnet-windows.zip UPCNet
+          DIR_NAME=UPCNet-${TAG}
+          mv UPCNet ${DIR_NAME}
+          zip -r upcnet-windows-${TAG}.zip ${DIR_NAME}
 
       - name: Upload to release
         uses: JasonEtco/upload-to-release@master
         with:
-          args: upcnet-windows.zip application/octet-stream
+          args: upcnet-windows-${TAG}.zip application/octet-stream
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
