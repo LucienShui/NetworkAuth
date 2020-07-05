@@ -32,8 +32,8 @@ jobs:
       - name: Pyinstaller
         shell: bash
         run: |
-          pyinstaller UPCNet.py
-          cp config.example.json dist/UPCNet/
+          pyinstaller --onefile UPCNet.py
+          cp config.example.json dist/
 
       - name: Stash dist to artifact
         uses: actions/upload-artifact@v2
@@ -62,13 +62,11 @@ jobs:
       - name: Set env
         run: |
           TAG=$(echo ${GITHUB_REF} | sed -e "s/refs\/tags\///g" | sed -e "s/release-v//g")
-          echo "::set-env name=TAG::${TAG}"
           echo "::set-env name=DIR_NAME::UPCNet_${TAG}"
           echo "::set-env name=ZIP_NAME::upcnet_${TAG}_windows.zip"
 
       - name: Zip file
         run: |
-          mv UPCNet/UPCNet UPCNet/bin
           mv UPCNet ${{ env.DIR_NAME }}
           zip -r ${{ env.ZIP_NAME }} ${{ env.DIR_NAME }}
 
