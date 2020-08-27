@@ -2,6 +2,7 @@
 config.ini
 config.json
 *.log
+logs
 
 # Python
 __pycache__
