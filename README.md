@@ -37,6 +37,10 @@ urllib/urllib.parse
 | 电信 | `ctcc` |
 | 校园内网 | `local` |
 
+## Windows 可执行文件
+
+[github.com/LucienShui/UPCNet/releases](https://github.com/LucienShui/UPCNet/releases)
+
 ## 目前支持的网络类型：
 
 理论上支持所有锐捷 `eportal` 认证。
