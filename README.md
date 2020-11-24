@@ -37,9 +37,31 @@ urllib/urllib.parse
 | 电信 | `ctcc` |
 | 校园内网 | `local` |
 
-## Windows 可执行文件
+## 部署
+
+### Windows 可执行文件
+
+> 需自行借助计划任务实现自动轮询
 
 [github.com/LucienShui/UPCNet/releases](https://github.com/LucienShui/UPCNet/releases)
+
+### Linux
+
+> 每 5 分钟尝试连接一次校园网
+
+首先克隆本项目至本地
+
+```bash
+git clone https://github.com/LucienShui/UPCNet.git /usr/local/upcnet
+```
+
+配置文件的位置为 `/usr/local/upcnet/config.json`
+
+执行 `crontab -e` 之后，追加一行
+ 
+```plain
+*/5 * * * * (cd /usr/local/upcnet && exec /usr/bin/env python3 /usr/local/upcnet/UPCNet.py)
+```
 
 ## 目前支持的网络类型：
 
